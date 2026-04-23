@@ -76,8 +76,8 @@ M.actions = {
           diff.close_diff()
           local ok, sidebar = pcall(require, "claude-diff.sidebar")
           if ok then sidebar.mark_reverted(filepath) end
+          return
         end
-        return
       end
     end
   end,
