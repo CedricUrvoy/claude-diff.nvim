@@ -6,6 +6,7 @@ M.defaults = {
   notify_position     = true,
   diff_style          = "side_by_side", -- "side_by_side" | "unified" | "inline"
   base_dir            = vim.fn.expand("~/.local/share/claude-diff"),
+  auto_open_sidebar   = true,
 }
 
 M.values = {}
