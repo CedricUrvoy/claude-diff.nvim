@@ -48,7 +48,7 @@ function M.start()
     watcher = nil
   end
   watcher = vim.uv.new_fs_event()
-  watcher:start(trigger, {}, vim.schedule_wrap(function(err, _, _)
+  watcher:start(trigger, {}, vim.schedule_wrap(function(err, _filename, _events)
     if err then return end
     if notify_timer then
       notify_timer:stop()
