@@ -15,6 +15,12 @@ local ICON_UNREVIEWED = "●"
 local ICON_REVIEWED   = "○"
 local ICON_REVERTED   = "✗"
 
+local function content_to_lines(s)
+  local lines = vim.split(s, "\n")
+  if lines[#lines] == "" then table.remove(lines) end
+  return lines
+end
+
 local function icon_for(filepath)
   local state = review_state[filepath]
   if state == "reverted" then return ICON_REVERTED end
@@ -92,14 +98,7 @@ local function filepath_at_cursor()
 end
 
 local function sorted_filepaths()
-  local seen = {}
-  local files = {}
-  for _, fp in pairs(file_lines) do
-    if not seen[fp] then
-      seen[fp] = true
-      table.insert(files, fp)
-    end
-  end
+  local files = vim.tbl_values(file_lines)
   table.sort(files)
   return files
 end
@@ -119,6 +118,7 @@ local function set_keymaps()
       if f == fp then idx = i; break end
     end
     diff.set_files(files, idx)
+    vim.cmd("wincmd p")
     diff.open_diff_for_file(fp)
   end
 
@@ -160,12 +160,12 @@ local function set_keymaps()
     local bufnr = vim.fn.bufnr(fp)
     if bufnr ~= -1 and vim.api.nvim_buf_is_valid(bufnr) then
       vim.bo[bufnr].modifiable = true
-      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(original, "\n"))
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, content_to_lines(original))
       if cfg.values.auto_save_on_revert then
         vim.api.nvim_buf_call(bufnr, function() vim.cmd("write") end)
       end
     else
-      vim.fn.writefile(vim.split(original, "\n"), fp)
+      vim.fn.writefile(content_to_lines(original), fp)
     end
     M.mark_reverted(fp)
     vim.notify("Reverted " .. vim.fn.fnamemodify(fp, ":t") .. " to pre-Claude state")
@@ -180,12 +180,12 @@ local function set_keymaps()
         local bufnr = vim.fn.bufnr(fp)
         if bufnr ~= -1 and vim.api.nvim_buf_is_valid(bufnr) then
           vim.bo[bufnr].modifiable = true
-          vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(original, "\n"))
+          vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, content_to_lines(original))
           if cfg.values.auto_save_on_revert then
             vim.api.nvim_buf_call(bufnr, function() vim.cmd("write") end)
           end
         else
-          vim.fn.writefile(vim.split(original, "\n"), fp)
+          vim.fn.writefile(content_to_lines(original), fp)
         end
         M.mark_reverted(fp)
       end
