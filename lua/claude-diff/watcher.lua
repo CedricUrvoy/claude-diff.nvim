@@ -34,6 +34,12 @@ local function fire_callbacks()
 end
 
 function M.start()
+  if notify_timer then
+    notify_timer:stop()
+    notify_timer:close()
+    notify_timer = nil
+  end
+
   local sdir    = session.session_dir()
   local trigger = sdir .. "/trigger"
 

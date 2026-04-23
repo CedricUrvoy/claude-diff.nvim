@@ -11,6 +11,9 @@ end
 function M.session_dir()
   local fallback_dir = session_dir_for(vim.fn.getcwd())
   local cwd_file = fallback_dir .. "/cwd"
+  -- Note: cwd-file lookup only works when Neovim's cwd matches Claude's cwd (same hash).
+  -- When they differ, the cwd file lives under Claude's hash, not Neovim's, so the
+  -- fallback is used. A global index would be needed to handle fully divergent cwds.
   if vim.fn.filereadable(cwd_file) == 1 then
     local lines = vim.fn.readfile(cwd_file)
     if lines and lines[1] and lines[1] ~= "" then

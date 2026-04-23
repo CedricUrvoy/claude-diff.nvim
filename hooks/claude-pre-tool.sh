@@ -35,9 +35,8 @@ if session_id:
 os.makedirs(originals_dir, exist_ok=True)
 
 # Write cwd file so Neovim can derive the same project hash
-if not os.path.exists(cwd_file):
-    with open(cwd_file, 'w') as f:
-        f.write(cwd)
+with open(cwd_file, 'w') as f:
+    f.write(cwd)
 
 if session_id:
     with open(session_id_file, 'w') as f:

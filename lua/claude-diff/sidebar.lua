@@ -215,6 +215,8 @@ local function on_trigger()
 end
 
 function M.open()
+  watcher.off_change(on_trigger)  -- defensive dedup before re-registering
+
   if sidebar_win and vim.api.nvim_win_is_valid(sidebar_win) then
     vim.api.nvim_set_current_win(sidebar_win)
     return
