@@ -16,7 +16,9 @@ project_hash = hashlib.sha256(cwd.encode()).hexdigest()[:8]
 session_dir = os.path.expanduser(f'~/.local/share/claude-diff/{project_hash}')
 originals_dir = os.path.join(session_dir, 'originals')
 manifest_path = os.path.join(session_dir, 'manifest.json')
+manifest_tmp  = manifest_path + '.tmp'
 session_id_file = os.path.join(session_dir, 'session_id')
+cwd_file = os.path.join(session_dir, 'cwd')
 
 session_id = data.get('session_id', '')
 
@@ -31,6 +33,11 @@ if session_id:
                 os.remove(manifest_path)
 
 os.makedirs(originals_dir, exist_ok=True)
+
+# Write cwd file so Neovim can derive the same project hash
+if not os.path.exists(cwd_file):
+    with open(cwd_file, 'w') as f:
+        f.write(cwd)
 
 if session_id:
     with open(session_id_file, 'w') as f:
@@ -55,6 +62,7 @@ except (FileNotFoundError, json.JSONDecodeError):
 if filepath not in m:
     is_new = not os.path.isfile(filepath)
     m[filepath] = {'original': orig_file, 'new': is_new}
-    with open(manifest_path, 'w') as f:
+    with open(manifest_tmp, 'w') as f:
         json.dump(m, f)
+    os.replace(manifest_tmp, manifest_path)
 "
