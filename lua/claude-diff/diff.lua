@@ -2,7 +2,7 @@ local M = {}
 local cfg     = require("claude-diff.config")
 local session = require("claude-diff.session")
 
-local saved_diffopt = nil
+local restore_diffopt = nil
 local current_files = {}
 local current_index = 1
 
@@ -18,15 +18,25 @@ function M.get_files()
 end
 
 function M.close_diff()
+  local diff_wins = {}
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_is_valid(win) and vim.wo[win].diff then
+      table.insert(diff_wins, win)
+    end
+  end
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_valid(buf) and vim.b[buf].claude_diff then
       vim.api.nvim_buf_delete(buf, { force = true })
     end
   end
-  vim.cmd("diffoff!")
-  if saved_diffopt then
-    vim.o.diffopt = saved_diffopt
-    saved_diffopt = nil
+  for _, win in ipairs(diff_wins) do
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_call(win, function() vim.cmd("diffoff") end)
+    end
+  end
+  if restore_diffopt then
+    vim.o.diffopt = restore_diffopt
+    restore_diffopt = nil
   end
 end
 
@@ -88,6 +98,8 @@ local function set_nav_maps(buf, filepath, right_buf_fn)
     current_index = (current_index % #current_files) + 1
     M.open_diff_for_file(current_files[current_index])
     M.notify_file_position()
+    local ok, sidebar = pcall(require, "claude-diff.sidebar")
+    if ok then sidebar.sync_cursor(current_files[current_index]) end
   end, { silent = true, buffer = buf, desc = "Next changed file" })
 
   vim.keymap.set("n", "[f", function()
@@ -95,6 +107,8 @@ local function set_nav_maps(buf, filepath, right_buf_fn)
     current_index = ((current_index - 2) % #current_files) + 1
     M.open_diff_for_file(current_files[current_index])
     M.notify_file_position()
+    local ok, sidebar = pcall(require, "claude-diff.sidebar")
+    if ok then sidebar.sync_cursor(current_files[current_index]) end
   end, { silent = true, buffer = buf, desc = "Prev changed file" })
 
   vim.keymap.set("n", "<leader>cr", function()
@@ -116,7 +130,7 @@ end
 local function open_side_by_side(filepath, original)
   local original_lines = vim.split(original, "\n")
 
-  saved_diffopt = vim.o.diffopt
+  restore_diffopt = vim.o.diffopt
   vim.o.diffopt = "internal,filler,closeoff,algorithm:histogram,linematch:60,inline:simple"
 
   vim.cmd("edit " .. vim.fn.fnameescape(filepath))
@@ -181,7 +195,7 @@ end
 local function open_inline(filepath, original)
   local original_lines = vim.split(original, "\n")
 
-  saved_diffopt = vim.o.diffopt
+  restore_diffopt = vim.o.diffopt
   vim.o.diffopt = "internal,filler,closeoff,algorithm:histogram,linematch:60,inline:only"
 
   vim.cmd("edit " .. vim.fn.fnameescape(filepath))
