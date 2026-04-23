@@ -118,8 +118,16 @@ local function set_keymaps()
       if f == fp then idx = i; break end
     end
     diff.set_files(files, idx)
-    vim.cmd("wincmd p")
+    -- move to the edit window (the window to the right of the sidebar)
+    local wins = vim.api.nvim_list_wins()
+    for _, w in ipairs(wins) do
+      if w ~= sidebar_win and not vim.b[vim.api.nvim_win_get_buf(w)].claude_diff_sidebar then
+        vim.api.nvim_set_current_win(w)
+        break
+      end
+    end
     diff.open_diff_for_file(fp)
+    vim.api.nvim_set_current_win(sidebar_win)
   end
 
   vim.keymap.set("n", "<CR>", open_current, vim.tbl_extend("force", opts, { desc = "Open diff for file" }))
@@ -222,6 +230,9 @@ function M.open()
     return
   end
 
+  -- remember the editing window before creating the split
+  local edit_win = vim.api.nvim_get_current_win()
+
   sidebar_buf = vim.api.nvim_create_buf(false, true)
   vim.bo[sidebar_buf].buftype    = "nofile"
   vim.bo[sidebar_buf].bufhidden  = "wipe"
@@ -263,14 +274,14 @@ function M.open()
   for line, fp in pairs(file_lines) do
     if line < first_line then first_line, first_fp = line, fp end
   end
-  if first_fp then
+  if first_fp and vim.api.nvim_win_is_valid(edit_win) then
     local files = sorted_filepaths()
     M.mark_reviewed(first_fp)
     local diff = require("claude-diff.diff")
     diff.set_files(files, 1)
-    vim.cmd("wincmd p")
+    vim.api.nvim_set_current_win(edit_win)
     diff.open_diff_for_file(first_fp)
-    vim.cmd("wincmd p")  -- return focus to sidebar
+    vim.api.nvim_set_current_win(sidebar_win)
   end
 end
 
