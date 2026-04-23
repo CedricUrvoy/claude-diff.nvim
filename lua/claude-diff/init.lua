@@ -29,6 +29,8 @@ M.actions = {
     diff.set_files(files, idx)
     diff.open_diff_for_file(files[idx])
     diff.notify_file_position()
+    local ok, sidebar = pcall(require, "claude-diff.sidebar")
+    if ok then sidebar.sync_cursor(files[idx]) end
   end,
   prev_file = function()
     local files, idx = diff.get_files()
@@ -37,6 +39,8 @@ M.actions = {
     diff.set_files(files, idx)
     diff.open_diff_for_file(files[idx])
     diff.notify_file_position()
+    local ok, sidebar = pcall(require, "claude-diff.sidebar")
+    if ok then sidebar.sync_cursor(files[idx]) end
   end,
   next_hunk = function()
     local before = vim.api.nvim_win_get_cursor(0)
@@ -70,21 +74,30 @@ M.actions = {
           end
           vim.notify("Reverted " .. vim.fn.fnamemodify(filepath, ":t") .. " to pre-Claude state")
           diff.close_diff()
+          local ok, sidebar = pcall(require, "claude-diff.sidebar")
+          if ok then sidebar.mark_reverted(filepath) end
         end
         return
       end
     end
   end,
-  close = function() diff.close_diff() end,
+  close = function()
+    diff.close_diff()
+  end,
   reset = function()
     vim.fn.delete(session.session_dir(), "rf")
     watcher.start()
+    local ok, sidebar = pcall(require, "claude-diff.sidebar")
+    if ok then
+      sidebar.reset_state()
+      sidebar.render()
+    end
     vim.notify("Claude diff session reset", vim.log.levels.INFO)
   end,
 }
 
 function M.setup(opts)
-  cfg.setup(opts) -- must be first: all modules read cfg.values
+  cfg.setup(opts)
 
   watcher.start()
 
@@ -93,19 +106,43 @@ function M.setup(opts)
     callback = vim.schedule_wrap(function()
       local files = vim.tbl_keys(session.read_manifest())
       if #files > 0 then
-        vim.notify("Claude modified files — :ClaudeDiff to review", vim.log.levels.INFO, { title = "Claude Code" })
+        if cfg.values.auto_open_sidebar then
+          local ok, sidebar = pcall(require, "claude-diff.sidebar")
+          if ok then sidebar.open() end
+        else
+          vim.notify(
+            "Claude modified files — <leader>cd to review",
+            vim.log.levels.INFO,
+            { title = "Claude Code" }
+          )
+        end
       end
     end),
   })
 
   vim.api.nvim_create_autocmd("DirChanged", {
-    callback = watcher.start,
+    callback = function()
+      watcher.start()
+      local ok, sidebar = pcall(require, "claude-diff.sidebar")
+      if ok then sidebar.render() end
+    end,
   })
 
   vim.api.nvim_create_autocmd("VimLeavePre", {
     once = true,
     callback = watcher.stop_all,
   })
+
+  vim.keymap.set("n", "<leader>cd", function()
+    local ok, sidebar = pcall(require, "claude-diff.sidebar")
+    if ok then sidebar.toggle() end
+  end, { silent = true, desc = "Toggle Claude diff sidebar" })
+
+  vim.keymap.set("n", "<leader>cc", function()
+    diff.close_diff()
+    local ok, sidebar = pcall(require, "claude-diff.sidebar")
+    if ok then sidebar.close() end
+  end, { silent = true, desc = "Close Claude diff and sidebar" })
 
   vim.api.nvim_create_user_command("ClaudeDiff", function()
     M.pick()
