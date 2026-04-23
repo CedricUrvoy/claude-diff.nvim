@@ -10,7 +10,7 @@ Claude Code's hook system snapshots every file before it's modified. The plugin 
 2. A `PostToolUse` hook touches a trigger file and optionally opens Neovim in a new tmux window if none is running.
 3. The plugin watches the trigger file with `vim.uv.fs_event` and notifies you when Claude modifies files.
 4. `:ClaudeDiff` opens a picker listing all changed files with a unified-diff preview.
-5. Selecting a file opens a `leftabove vsplit` side-by-side diff with histogram algorithm + intra-line highlighting.
+5. Selecting a file opens a diff view. The style is configurable (`side_by_side`, `unified`, or `inline`) and can be cycled live with `]d` / `[d`.
 
 ## Requirements
 
@@ -49,9 +49,10 @@ All options and their defaults:
 
 ```lua
 opts = {
-  debounce_ms         = 500,   -- ms to wait before firing the "modified" notification
-  auto_save_on_revert = true,  -- write the file to disk after reverting
-  notify_position     = true,  -- show "[2/5] path/to/file" when cycling through files
+  debounce_ms         = 500,           -- ms to wait before firing the "modified" notification
+  auto_save_on_revert = true,          -- write the file to disk after reverting
+  notify_position     = true,          -- show "[2/5] path/to/file" when cycling through files
+  diff_style          = "side_by_side", -- default style: "side_by_side" | "unified" | "inline"
   base_dir            = vim.fn.expand("~/.local/share/claude-diff"),
 }
 ```
@@ -72,6 +73,7 @@ opts = {
 | `q` | Close diff |
 | `]c` / `[c` | Next / prev hunk (wrapping) |
 | `]f` / `[f` | Next / prev changed file |
+| `]d` / `[d` | Next / prev diff style (side-by-side → unified → inline) |
 | `<leader>cr` | Revert file to pre-Claude state |
 
 ## Session lifecycle
