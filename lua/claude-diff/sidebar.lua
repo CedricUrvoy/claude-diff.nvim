@@ -257,6 +257,21 @@ function M.open()
 
   watcher.on_change(on_trigger)
   M.render()
+
+  -- auto-open diff for the first file (lowest line number = topmost in sidebar)
+  local first_line, first_fp = math.huge, nil
+  for line, fp in pairs(file_lines) do
+    if line < first_line then first_line, first_fp = line, fp end
+  end
+  if first_fp then
+    local files = sorted_filepaths()
+    M.mark_reviewed(first_fp)
+    local diff = require("claude-diff.diff")
+    diff.set_files(files, 1)
+    vim.cmd("wincmd p")
+    diff.open_diff_for_file(first_fp)
+    vim.cmd("wincmd p")  -- return focus to sidebar
+  end
 end
 
 function M.close()
